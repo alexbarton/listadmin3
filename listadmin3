@@ -100,7 +100,10 @@ class Mailman3UI:
             print(f"Held messages :{page.text}:")
 
         msg_form = page.soup.find("h2")
-        if msg_form.text.strip() != "Held Messages":
+        if msg_form.text.strip() not in [
+            "Held Messages", # en_US
+            "Zurückgehaltene Nachrichten", # de_DE
+        ]:
             raise HTMLParseError("Couldn't find held message list")
 
         return msg_form
