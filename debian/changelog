@@ -1,3 +1,11 @@
+listadmin3 (0.1-1+ax2) unstable; urgency=medium
+
+  * Include fix for "Queue handling fails for Mailman3 web pages in
+    Non-English locales", GitHub issue #1, by removing the locale-dependant
+    check (as proposed as option (1) in the GitHub issue tracker).
+
+ -- Alexander Barton <alex@barton.de>  Mon, 18 Sep 2023 11:10:34 +0200
+
 listadmin3 (0.1-1+ax1) unstable; urgency=low
 
   [ Jonathan McDowell ]
