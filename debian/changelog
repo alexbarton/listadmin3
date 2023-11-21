@@ -1,3 +1,11 @@
+listadmin3 (0.1-1+ax3) UNRELEASED; urgency=medium
+
+  * Include fix for "Subscriber handling fails for Mailman3 web pages in
+    Non-English locales", GitHub issue #4, by removing the locale-dependant
+    check.
+
+ -- Alexander Barton <alex@barton.de>  Tue, 21 Nov 2023 22:05:43 +0100
+
 listadmin3 (0.1-1+ax2) unstable; urgency=medium
 
   * Include fix for "Queue handling fails for Mailman3 web pages in
