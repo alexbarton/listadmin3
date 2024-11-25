@@ -43,6 +43,14 @@ except ImportError:
 #
 DEBUG = False
 
+# The default configuration. Every configuration option needs to be listed here,
+# as the keys are used for sanity checking the configuration when we read it.
+default_conf: dict[str, str] = {
+        'base_url': '',
+        'password': '',
+        'username': '',
+}
+
 class HTMLParseError(Exception):
     """ Exception class for reporting HTML parse errors """
 
@@ -64,7 +72,13 @@ class Mailman3UI:
         self._browser.select_form(selector='form.login')
         self._browser["login"] = self._username
         self._browser["password"] = self._password
-        self._browser.submit_selected()
+        page = self._browser.submit_selected()
+
+        login_error = page.soup.find("div", class_="alert-danger")
+        if not login_error:
+            return (True, "")
+
+        return (False, login_error.string)
 
     def logout(self):
         """ Logs out of the Mailman3 instance """
@@ -174,9 +188,15 @@ class Mailman3UI:
             row_data = sub_row.find("td")
             sub["email"] = row_data.text.strip()
             row_data = row_data.find_next_sibling("td")
-            req_hash = row_data.find("a")
-            req_hash = re.search(r'.*/handle_subscription_request/([^/]+)/(accept|reject|discard)',
-                                 req_hash['href'])
+            req_hash = row_data.find("form")
+            if req_hash is not None:
+                req_hash = re.search(r'.*/handle_subscription_request/([^/]+)/',
+                                 req_hash['action'])
+            if req_hash is None:
+                req_hash = row_data.find("a")
+                req_hash = re.search(
+                        r'.*/handle_subscription_request/([^/]+)/(|accept|reject|discard)$',
+                        req_hash['href'])
             if req_hash:
                 sub["req_hash"] = req_hash.group(1)
 
@@ -228,12 +248,11 @@ def getch(allowed_chars="") -> str:
         termios.tcsetattr(stdin_fd, termios.TCSAFLUSH, orig)
 
 
-def read_config(filename: str) -> dict:
-    """ Reads the config file """
+def read_config(filename: str) -> list:
+    """ Reads the config file and returns a list of list configurations """
 
-    conf: dict[str, str] = {
-        'lists': [], # type: ignore
-    }
+    conf = default_conf
+    lists: list[dict[str, str]] = []
 
     # pylint: disable=invalid-name
     with open(filename, "r", encoding="utf-8") as f:
@@ -249,11 +268,16 @@ def read_config(filename: str) -> dict:
                 sys.exit(1)
 
             if parts[0] == 'list':
-                conf['lists'].append(parts[1]) # type: ignore
+                # Each list has its own distinct config, so make a copy of the dict
+                lists.append(dict(conf))
+                lists[-1]['list'] = parts[1]
             else:
+                if parts[0] not in conf:
+                    print("Unknown config option:", line)
+                    sys.exit(1)
                 conf[parts[0]] = parts[1]
 
-    return conf
+    return lists
 
 
 #pylint: disable=too-many-branches
@@ -311,13 +335,14 @@ def moderate_messages(mmui: Mailman3UI, listname: str) -> bool:
     if len(todo['accept']) > 0 or len(todo['discard']) > 0:
         print(f"{len(todo['accept'])} to accept, "
               f"{len(todo['discard'])} to discard, "
-               "proceed? (y/n) ",
+               "proceed? (y/n) [yes] ",
                 end='', flush=True)
 
         # pylint: disable=invalid-name
-        c = getch("ny")
-        print()
-        if c != 'y':
+        c = getch("ny\n")
+        if c != '\n':
+            print()
+        if c == 'n':
             print("Moving on...")
             return True
 
@@ -399,16 +424,30 @@ def listadmin3():
     if args.debug:
         DEBUG = True
 
-    config = read_config(args.config)
-
-    webui = Mailman3UI(url=config['base_url'],
-                       username=config['username'],
-                       password=config['password'])
-    webui.login()
+    lists = read_config(args.config)
+    last = ('', '', '')
+    webui = None
 
     # pylint: disable=invalid-name
-    for l in config['lists']:
-        moderate_list(webui, l)
+    for l in lists:
+        # Check if we need to login, either for the first time or because our
+        # list config details changed.
+        if last != (l['base_url'], l['username'], l['password']):
+            if webui is not None:
+                webui.logout()
+
+            webui = Mailman3UI(url=l['base_url'],
+                       username=l['username'],
+                       password=l['password'])
+            login_ok, details = webui.login()
+
+            if not login_ok:
+                print("Could not login to web interface:", details)
+                return
+
+            last = (l['base_url'], l['username'], l['password'])
+
+        moderate_list(webui, l['list'])
 
 
 if __name__ == '__main__':
