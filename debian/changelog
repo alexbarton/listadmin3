@@ -1,4 +1,4 @@
-listadmin3 (0.1-1+ax3) UNRELEASED; urgency=medium
+listadmin3 (0.1-1+ax3) unstable; urgency=medium
 
   * Include fix for "Subscriber handling fails for Mailman3 web pages in
     Non-English locales", GitHub issue #4, by removing the locale-dependant
