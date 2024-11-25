@@ -1,3 +1,16 @@
+listadmin3 (0.1-1+ax4) UNRELEASED; urgency=medium
+
+  * Rebase my "alex" branch onto current upstream:
+    - origin/main:
+      Add support for multiple list hosts in the configuration
+      Add ability to hit Enter for confirmation to proceed with actions
+      Add Makefile
+      Fix subscription handling
+      Check if we've managed to login correctly
+      Subscriptions: Don't try to validate the localized page title
+
+ -- Alexander Barton <alex@barton.de>  Mon, 25 Nov 2024 15:56:39 +0100
+
 listadmin3 (0.1-1+ax3) unstable; urgency=medium
 
   * Include fix for "Subscriber handling fails for Mailman3 web pages in
